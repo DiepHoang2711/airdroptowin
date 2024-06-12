@@ -3,7 +3,6 @@ const { countdown, getRandomInt, getDateTimeLocal } = require("../common");
 const { accounts } = require("./config");
 
 async function callApiClaim(account) {
-  //const _coins = getRandomInt(19980, 20000);
   let data = JSON.stringify({
     coins: 20000,
   });

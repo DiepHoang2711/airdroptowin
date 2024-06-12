@@ -22,7 +22,7 @@ function getDateTimeLocal() {
 
 function handleError(key, response) {
   console.log("ERROR-----------------------------------");
-  console.log(`${key} :`, JSON.stringify(response));
+  //console.log(`${key} :`, JSON.stringify(response));
   telegram.send(key, JSON.stringify(response));
 }
 
