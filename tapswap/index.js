@@ -1,20 +1,44 @@
 const axios = require("axios");
 const { getRandomInt } = require("../common");
-const jsdom = require("jsdom");
-const { JSDOM } = jsdom;
+const puppeteer = require("puppeteer");
 const { accounts } = require("./config");
 
 function calculateContentId(accountId, timestamp) {
   return (accountId * timestamp) % accountId;
 }
 
+const defaultChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+function makeRandomString(length) {
+  let randomString = "";
+  const charsLength = defaultChars.length;
+
+  for (let i = 0; i < length; i++) {
+    randomString += defaultChars.charAt(Math.floor(Math.random() * charsLength));
+  }
+  return randomString;
+}
+
+const decodedCacheId = (jsCode, length = 8) => {
+  const pattern = new RegExp("\\b\\w{" + length + "}\\b", "g");
+  const matches = jsCode.match(pattern);
+  const trashWords = new Set(["function", "continue", "document", "parseInt", "toString"]);
+  const filteredMatches = matches.filter(
+    (match) => match.match(/^\w+$/) && !trashWords.has(match) && !match.startsWith("x22"),
+  );
+  const uniqueFilteredMatches = Array.from(new Set(filteredMatches));
+  return uniqueFilteredMatches.join(" ");
+};
+
 const pathApi = {
   login: "account/login",
   getPoint: "player/submit_taps",
 };
 
+const xcv = "631";
+
 async function callApi(pathApi, data, account, timestamp) {
   const contentId = calculateContentId(account.accountId, timestamp);
+  const cacheId = account.cacheId;
 
   let config = {
     method: "post",
@@ -24,6 +48,7 @@ async function callApi(pathApi, data, account, timestamp) {
       Accept: "*/*",
       "Accept-Language": "vi-VN,vi;q=0.9,fr-FR;q=0.8,fr;q=0.7,en-US;q=0.6,en;q=0.5",
       Authorization: `Bearer ${account.authorization}`,
+      "Cache-Id": `${cacheId}`,
       Connection: "keep-alive",
       "Content-Id": `${contentId}`,
       "Content-Type": "application/json",
@@ -38,8 +63,8 @@ async function callApi(pathApi, data, account, timestamp) {
       "sec-ch-ua-mobile": "?1",
       "sec-ch-ua-platform": '"Android"',
       "x-app": "tapswap_server",
-      "x-bot": "no",
-      "x-cv": "621",
+      "x-cv": `${xcv}`,
+      "x-touch": "1",
     },
     data: data,
   };
@@ -56,7 +81,7 @@ async function callApi(pathApi, data, account, timestamp) {
   return result;
 }
 
-async function callApiLogin(pathApi, data) {
+async function callApiLogin(pathApi, data, cacheId = makeRandomString(8)) {
   let config = {
     method: "post",
     maxBodyLength: Infinity,
@@ -64,6 +89,7 @@ async function callApiLogin(pathApi, data) {
     headers: {
       Accept: "*/*",
       "Accept-Language": "vi-VN,vi;q=0.9,fr-FR;q=0.8,fr;q=0.7,en-US;q=0.6,en;q=0.5",
+      "Cache-Id": `${cacheId}`,
       Connection: "keep-alive",
       "Content-Type": "application/json",
       Origin: "https://app.tapswap.club",
@@ -77,8 +103,8 @@ async function callApiLogin(pathApi, data) {
       "sec-ch-ua-mobile": "?1",
       "sec-ch-ua-platform": '"Android"',
       "x-app": "tapswap_server",
-      "x-bot": "no",
-      "x-cv": "621",
+      "x-cv": `${xcv}`,
+      "x-touch": "1",
     },
     data: data,
   };
@@ -95,57 +121,61 @@ async function callApiLogin(pathApi, data) {
   return result;
 }
 
-async function extractChq(chq) {
-  // const chq =
-  //   "fbe8f3fee9f4f2f3bdffb5feb1f9b4e6ebfcefbdf8a0fcb5b4a6eff8e9e8eff3bdffa0fbe8f3fee9f4f2f3b5fbb1fab4e6fba0fbb0ade5fea5a6ebfcefbdf5a0f8c6fbc0a6eff8e9e8eff3bdf5a6e0b1ffb5feb1f9b4a6e0b5fbe8f3fee9f4f2f3b5feb1f9b4e6ebfcefbdf1a0ffb1f8a0feb5b4a6eaf5f4f1f8b5bcbcc6c0b4e6e9efe4e6ebfcefbdfba0edfcefeef8d4f3e9b5f1b5ade5fea5b4b4b2ade5acb6edfcefeef8d4f3e9b5f1b5ade5fea4b4b4b2ade5afb7b5edfcefeef8d4f3e9b5f1b5ade5fefcb4b4b2ade5aeb4b6b0edfcefeef8d4f3e9b5f1b5ade5feffb4b4b2ade5a9b7b5edfcefeef8d4f3e9b5f1b5ade5fefeb4b4b2ade5a8b4b6b0edfcefeef8d4f3e9b5f1b5ade5fef9b4b4b2ade5abb7b5b0edfcefeef8d4f3e9b5f1b5ade5fef8b4b4b2ade5aab4b6b0edfcefeef8d4f3e9b5f1b5ade5fefbb4b4b2ade5a5b7b5edfcefeef8d4f3e9b5f1b5ade5f9adb4b4b2ade5a4b4b6b0edfcefeef8d4f3e9b5f1b5ade5f9acb4b4b2ade5fcb6edfcefeef8d4f3e9b5f1b5ade5f9afb4b4b2ade5ffa6f4fbb5fba0a0a0f9b4ffeff8fcf6a6f8f1eef8bdf8c6baede8eef5bac0b5f8c6baeef5f4fbe9bac0b5b4b4a6e0fefce9fef5b5fab4e6f8c6baede8eef5bac0b5f8c6baeef5f4fbe9bac0b5b4b4a6e0e0e0b5fcb1ade5a8ada9ffadb4b1b5fbe8f3fee9f4f2f3b5b4e6e9efe4e6f8ebfcf1b5baf9f2fee8f0f8f3e9c6c1bafaf8e9d8f1f8f0f8f3e9dfe4d4f9c1bac0a6bab4a6e0fefce9fef5e6eff8e9e8eff3bdade5feadfbf8fffcfff8a6e0ebfcefbdfea0f9f2fee8f0f8f3e9b1f8a0bafaf8e9d8f1f8f0f8f3e9dfe4d4f9bab1fba0bafaf8e9dce9e9eff4ffe8e9f8bab1f5a0fec6f8c0b5bac2fef5efc2bab4a6f5c6baf4f3f3f8efd5c9d0d1bac0a0baa1f9f4eba3a1f9f4ebc1e5afadf4f9a0c1e5afafc2f4c9c2adc1e5afafbab6bac1e5afadc2eba0c1e5afafa8aea9a4adc1e5afafa3a1f9f4ebc1e5afadf4f9a0bab6bac1e5afafc2ccffc2acc1e5afafc1e5afadc2eba0c1e5afafaaadacaca4c1e5afafa3a1bab6baf9f4ebc1e5afadf4f9a0c1e5afafc2e7e5c2afc1e5afafc1e5afadc2eba0c1e5afafa9bab6baaaadaba8c1e5afafa3a1f9f4ebc1e5afadf4f9a0c1e5afafc2fffbc2aebab6bac1e5afafc1e5afadc2eba0c1e5afafa4aeabaaa5c1e5afafa3a1f9f4ebc1e5afadf4f9bab6baa0c1e5afafc2c8e4c2a9c1e5afafc1e5afadc2eba0c1e5afafa5afa9afa4c1e5afafa3bab6baa1b2f9f4eba3a1b2f9f4eba3a1b2f9f4eba3a1b2bab6baf9f4eba3a1b2f9f4eba3a1b2f9f4eba3baa6ebfcefbdf4a0fec6f8c0b5bac2e7e5c2afbab4c6fbc0b5bac2ebbab4b1f7a0fec6f8c0b5bac2f4c9c2adbab4c6fbc0b5bac2ebbab4b1f6a0b6f4a6eff8e9e8eff3bdf6b7a0f6b1f6b7a0b6f7b1f6b8a0ade5a4acf8fbfbb1f6a6e0b5b4b4b4a6fbe8f3fee9f4f2f3bdfcb5b4e6ebfcefbdf0a0c6baacada4ada9a8d5d5d2f3f7fabab1baa5a9ffecc4f6c4f0bab1baaea9aba5aef4cbecd9f0f8bab1baa4affac4cbdffbe5bab1baaaa4abaca8efc9c4fff2c8bab1baaeafa5a4aeafcef2dcdec7eebab1baafacc7fbf3d4eec5bab1baafa4abd5fbd7ccf8f9bab1baaca8afa8a4a8cbcbd9c9f4cdbab1baa9a9afada9adadcfcfc7f1fbf3bab1baacacada8a4a8afacd9f1e7edc9fbbac0a6fca0fbe8f3fee9f4f2f3b5b4e6eff8e9e8eff3bdf0a6e0a6eff8e9e8eff3bdfcb5b4a6e0";
-  const len = chq.length,
-    bytes = new Uint8Array(len / 2),
-    x = 157;
-  for (let R = 0; R < len; R += 2) bytes[R / 2] = parseInt(chq.substring(R, R + 2), 16);
-  const xored = bytes.map((R) => R ^ x),
-    decoded = new TextDecoder().decode(xored);
-
-  const htmlMatch = decoded.match(/innerHTML.+?=(.+?);/is);
-  if (!htmlMatch) {
-    console.log("err htmlMatch");
+async function extractChq(chq, accountId) {
+  if (typeof global.browser === "undefined" || global.browser === null) {
+    global.browser = await puppeteer.launch({ headless: true });
+    global.page = await global.browser.newPage();
   }
 
-  let html = htmlMatch[1].trim().replace(/'\+'/g, "");
+  const chqLength = chq.length;
 
-  html = eval(html);
-  const dom = new JSDOM(html);
+  let bytesArray = Buffer.alloc(chqLength / 2);
+  const xorKey = 157;
 
-  const divElements = dom.window.document.querySelectorAll("div");
-  const codes = {};
+  for (let i = 0; i < chqLength; i += 2) {
+    bytesArray[i / 2] = parseInt(chq.substring(i, i + 2), 16);
+  }
 
-  divElements.forEach((div) => {
-    if (div.hasAttribute("id") && div.hasAttribute("_v")) {
-      codes[div.getAttribute("id")] = div.getAttribute("_v");
+  let xorBytes = Buffer.alloc(bytesArray.length);
+  for (let i = 0; i < bytesArray.length; i++) {
+    xorBytes[i] = bytesArray[i] ^ xorKey;
+  }
+
+  const decodedXor = xorBytes.toString("utf-8");
+
+  await global.page.evaluate(() => {
+    window.ctx = {};
+    window.ctx.api = {};
+    window.ctx.d_headers = new Map();
+    window.ctx.api.setHeaders = function (entries) {
+      for (const [W, U] of Object.entries(entries)) window.ctx.d_headers.set(W, U);
+    };
+    var chrStub = document.createElement("div");
+    chrStub.id = "_chr_";
+    document.body.appendChild(chrStub);
+  });
+
+  const fixedXor = decodedXor.replace(/`/g, "\\`");
+
+  let chr = await global.page.evaluate((fixedXor) => {
+    try {
+      return eval(fixedXor);
+    } catch (e) {
+      return e;
+    }
+  }, fixedXor);
+
+  const cacheId = await global.page.evaluate(() => {
+    try {
+      return window.ctx.d_headers.get("Cache-Id");
+    } catch (e) {
+      return e;
     }
   });
-  console.log(codes);
-
-  const vaMatch = decoded.match(/var\s*i\s*=\s*.+?\(["'](\w+)["']\).+?,/is);
-  const vbMatch = decoded.match(/,\s*j\s*=\s*.+?\(["'](\w+)["']\).+?,/is);
-  const rMatch = decoded.match(/k\s*%=\s*(\w+)/is);
-
-  if (!vaMatch || !vbMatch || !rMatch) {
-    console.log("Error matchh");
-  }
-
-  const va = vaMatch[1];
-  const vb = vbMatch[1];
-  const r = parseInt(rMatch[1], 16);
-
-  const i = parseInt(codes[va]);
-  const j = parseInt(codes[vb]);
-  let k = i;
-
-  k *= k;
-  k *= j;
-  k %= r;
-
-  return k;
+  console.log("Decoded Login Pass", cacheId, chr);
+  const keyPass = accountId % (10000 + parseInt(xcv));
+  chr = chr + keyPass;
+  return { chr, cacheId };
 }
 
 async function callApiApplyBoost(account) {
@@ -236,18 +266,24 @@ async function run() {
           account.authorization = access_token;
           accounts[index].authorization = access_token;
           if (responseLoginFirst.chq) {
-            const chr = await extractChq(responseLoginFirst.chq);
+            const extract_Chq = await extractChq(responseLoginFirst.chq, account?.accountId);
             const dataLogin = JSON.stringify({
               init_data: `${account.init_data}`,
               referrer: "",
               bot_key: "app_bot_2",
-              chr: chr,
+              chr: extract_Chq.chr,
             });
-            const responseLogin = await callApiLogin(pathApi.login, dataLogin);
-            const access_token = responseLogin["access_token"];
-            account.authorization = access_token;
-            accounts[index].authorization = access_token;
-            // accounts[index].time = responseLogin["player"]["time"] - 1111;
+            const responseLogin = await callApiLogin(pathApi.login, dataLogin, extract_Chq.cacheId);
+            if (responseLogin?.statusCode === 201 || responseLogin?.statusCode === 200) {
+              const access_token = responseLogin["access_token"];
+              account.authorization = access_token;
+              account.cacheId = extractChq.cacheId;
+              accounts[index].authorization = access_token;
+              // accounts[index].time = responseLogin["player"]["time"] - 1111;
+            } else {
+              console.log("Login fail");
+              isRun = false;
+            }
           }
         } else {
           console.log("Login fail");

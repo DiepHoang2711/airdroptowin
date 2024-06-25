@@ -1,140 +1,38 @@
+const { getApps } = require("./common");
+
+const ignores = ["Bunnycoin", "Mana", "SpinnerCoin"];
+const modules = getApps();
+let apps = modules
+  .filter((i) => !ignores.includes(i.appName))
+  .map((i) => {
+    const { appName, path } = i;
+    return {
+      name: appName,
+      script: path,
+      instances: 1,
+      autorestart: true,
+      ignore_watch: ["node_modules"],
+      watch: false,
+      watch_options: {
+        followSymlinks: false,
+      },
+      max_memory_restart: "90M",
+    };
+  });
+
+apps.push({
+  name: "Hamster Sync",
+  script: "./hamster/hamster-sync.js",
+  instances: 1,
+  autorestart: true,
+  ignore_watch: ["node_modules"],
+  watch: false,
+  watch_options: {
+    followSymlinks: false,
+  },
+  max_memory_restart: "90M",
+});
+
 module.exports = {
-  apps: [
-    {
-      name: "Dotcoin",
-      script: "./dotcoin/dotcoin.js",
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      max_memory_restart: "90M",
-    },
-    {
-      name: "Hamster",
-      script: "./hamster/hamster.js",
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      max_memory_restart: "90M",
-    },
-    {
-      name: "Hamster Sync",
-      script: "./hamster/hamster-sync.js",
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      max_memory_restart: "90M",
-    },
-    {
-      name: "Mars",
-      script: "./mars/mars.js",
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      max_memory_restart: "90M",
-    },
-    {
-      name: "Oxygen",
-      script: "./oxygen/oxygen.js",
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      max_memory_restart: "90M",
-    },
-    {
-      name: "Pixel",
-      script: "./pixel/pixel.js",
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      max_memory_restart: "90M",
-    },
-    {
-      name: "Tapswap",
-      script: "./tapswap/tapswap.js",
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      max_memory_restart: "90M",
-    },
-    {
-      name: "Seed",
-      script: "./seed/seed.js",
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      max_memory_restart: "90M",
-    },
-    {
-      name: "Yescoin",
-      script: "./yescoin/yescoin.js",
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      max_memory_restart: "90M",
-    },
-    {
-      name: "BunnyCoin",
-      script: "./bunnycoin/bunnycoin.js",
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      max_memory_restart: "90M",
-    },
-    {
-      name: "Cexpcex",
-      script: "./cexpcex/cexpcex.js",
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      max_memory_restart: "90M",
-    },
-    {
-      name: "Mana",
-      script: "./mana/mana.js",
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      max_memory_restart: "90M",
-    },
-    // {
-    //   name: "CatBoots",
-    //   script: "./cat/index.js",
-    //   instances: 1,
-    //   autorestart: true,
-    //   watch: false,
-    //   max_memory_restart: "90M",
-    // },
-    {
-      name: "HoldWallet",
-      script: "./holdwallet/holdwallet.js",
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      max_memory_restart: "90M",
-    },
-    {
-      name: "Pocketfi",
-      script: "./pocketfi/index.js",
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      max_memory_restart: "90M",
-    },
-    {
-      name: "pocketgame",
-      script: "./pocketgame/index.js",
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      max_memory_restart: "90M",
-    },
-    // {
-    //   name: "Watpoint",
-    //   script: "./Watpoint/index.js",
-    //   instances: 1,
-    //   autorestart: true,
-    //   watch: false,
-    //   max_memory_restart: "90M",
-    // },
-  ],
+  apps: apps,
 };

@@ -5,9 +5,8 @@ const { accounts } = require("./config");
 
 async function buyBoots(account, callback) {
   let data = JSON.stringify({
-    "count": 1000,
-    "availableTaps": 7996,
-    "timestamp": new Date().getTime(),
+    boostId: "BoostFullAvailableTaps",
+    timestamp: new Date().getTime(),
   });
 
   let config = {
@@ -34,6 +33,7 @@ async function buyBoots(account, callback) {
   axios
     .request(config)
     .then((response) => {
+      //console.log(JSON.stringify(response.data));
       callback && callback(account);
     })
     .catch((error) => {
@@ -42,7 +42,7 @@ async function buyBoots(account, callback) {
 
   setTimeout(() => {
     buyBoots(account, callback);
-  }, 62 * 1000 * 60);
+  }, 61 * 1000 * 60);
 }
 
 async function callApi(account, availableTaps) {
