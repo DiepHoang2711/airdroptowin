@@ -1,6 +1,5 @@
-const axios = require("axios");
-const fs = require("fs");
-const path = require("path");
+const fs = require('fs');
+const path = require('path');
 
 function getRandomInt(min, max) {
   min = Math.ceil(min);
@@ -23,69 +22,76 @@ function getDateTimeLocal() {
 
 function handleError(key, response) {
   console.log("ERROR-----------------------------------");
-  //console.log(`${key} :`, JSON.stringify(response));
+  console.log(`${key} :`, JSON.stringify(response));
   telegram.send(key, JSON.stringify(response));
 }
 
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-function handleError(err, data) {
-  console.log(err, data);
-}
 
-const telegram = {
-  botToken: "7304983434:AAHPzgajSjE6grr0NpqaDVOWNmHmoBfqF6w",
-  send: async function (message, chatId = "-4101088309") {
-    const telegramApiUrl = `https://api.telegram.org/bot${this.botToken}/sendMessage`;
-    const response = await axios.post(telegramApiUrl, {
-      chat_id: chatId,
-      text: message,
-    });
+const colours = {
+  reset: "\x1b[0m",
+  bright: "\x1b[1m",
+  dim: "\x1b[2m",
+  underscore: "\x1b[4m",
+  blink: "\x1b[5m",
+  reverse: "\x1b[7m",
+  hidden: "\x1b[8m",
+
+  fg: {
+    black: "\x1b[30m",
+    red: "\x1b[31m",
+    green: "\x1b[32m",
+    yellow: "\x1b[33m",
+    blue: "\x1b[34m",
+    magenta: "\x1b[35m",
+    cyan: "\x1b[36m",
+    white: "\x1b[37m",
+    gray: "\x1b[90m",
+    crimson: "\x1b[38m" // Scarlet
   },
+  bg: {
+    black: "\x1b[40m",
+    red: "\x1b[41m",
+    green: "\x1b[42m",
+    yellow: "\x1b[43m",
+    blue: "\x1b[44m",
+    magenta: "\x1b[45m",
+    cyan: "\x1b[46m",
+    white: "\x1b[47m",
+    gray: "\x1b[100m",
+    crimson: "\x1b[48m"
+  }
 };
 
-// Function to find index.js files
-function findIndexFiles(dir) {
-  let results = [];
-  function searchDir(currentDir) {
-    if (currentDir.includes("node_modules")) {
+function writeFile(folderName, file, index, newText, dataReplace) {
+  const configFilePath = path.join(__dirname, folderName, file);
+  fs.readFile(configFilePath, 'utf8', (err, data) => {
+    if (err) {
+      console.error('Error reading file:', err);
       return;
     }
-    const files = fs.readdirSync(currentDir);
-    for (const file of files) {
-      const fullPath = path.join(currentDir, file);
-      const stat = fs.statSync(fullPath);
-      if (stat.isDirectory()) {
-        searchDir(fullPath);
-      } else if (file === "index.js") {
-        results.push(fullPath);
-      }
+
+    let accountsData;
+    try {
+      accountsData = eval(data); // Parse JSON-like content
+    } catch (e) {
+      console.error('Error parsing JSON:', e);
+      return;
     }
-  }
-  searchDir(dir);
-  let _results = [];
+    console.log("initData new >>>>>", newText);
+    accountsData.accounts[index][dataReplace] = newText;
 
-  function capitalizeFirstLetter(str) {
-    if (typeof str !== "string" || str.trim() === "") return str;
-    return str.charAt(0).toUpperCase() + str.slice(1);
-  }
-
-  for (const result of results) {
-    let _ = result.replace(dir, ".");
-    let arrays = _.split("\\");
-    let appName = capitalizeFirstLetter(arrays[1]);
-    _results.push({
-      appName: appName,
-      path: arrays.join("/")
+    const updatedContent = `let accounts = ${JSON.stringify(accountsData?.accounts, null, 2)};\n module.exports = { accounts };\n`;
+    fs.writeFile(configFilePath, updatedContent, 'utf8', (err) => {
+      if (err) {
+        console.error('Error writing file:', err);
+        return;
+      }
+      console.log('File config.js has been updated.');
     });
-  }
-
-  return _results;
+  });
 }
 
-function getApps() {
-  const indexFiles = findIndexFiles(__dirname);
-  return indexFiles;
-}
-
-module.exports = { getRandomInt, countdown, sleep, getDateTimeLocal, handleError, telegram, getApps };
+module.exports = { getRandomInt, countdown, sleep, getDateTimeLocal, handleError, colours, writeFile };

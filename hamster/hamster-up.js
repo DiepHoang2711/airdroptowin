@@ -75,61 +75,71 @@ function sortUpgradesForBuy(data) {
 }
 async function run(account) {
   let isRun = true;
-  while (isRun) {
-    const response = await callApiUpgradesForBuy(account);
-    if (response?.statusCode === 201 || response?.statusCode === 200) {
-      if (response?.upgradesForBuy && response?.upgradesForBuy?.length > 0) {
-        let upgradesForBuy = sortUpgradesForBuy(response?.upgradesForBuy);
-        let isNextUpdate = true;
-        while (isNextUpdate) {
-          const timestamp = new Date().getTime();
-          const upgradeId = upgradesForBuy[0]?.id;
-          let data = JSON.stringify({
-            upgradeId: upgradeId,
-            timestamp: timestamp,
-          });
-          console.log("Update: ", data);
-          var responseUpdate = await callApiBuyUpgrade(account, data);
+  //while (isRun) {
+  const response = await callApiUpgradesForBuy(account);
+  if (response?.statusCode === 201 || response?.statusCode === 200) {
+    if (response?.upgradesForBuy && response?.upgradesForBuy?.length > 0) {
+      let upgradesForBuy = sortUpgradesForBuy(response?.upgradesForBuy);
+      //upgradesForBuy = upgradesForBuy.filter(a => a.price < 1000000)
 
-          if (responseUpdate?.statusCode === 201 || responseUpdate?.statusCode === 200) {
-            const balanceCoins = responseUpdate?.clickerUser?.balanceCoins
-              ? Math.floor(responseUpdate?.clickerUser?.balanceCoins)
-              : 0;
-            console.log("balanceCoins", balanceCoins);
-            console.log("price", upgradesForBuy?.[1]?.price);
-            console.log("profitPerHourDelta", upgradesForBuy?.[1]?.profitPerHourDelta);
-            console.log("tb: ", upgradesForBuy?.[1]?.price / upgradesForBuy?.[1]?.profitPerHourDelta);
+      // console.log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> |||| upgradesForBuy ", upgradesForBuy[0].price);
 
-            if (balanceCoins >= upgradesForBuy?.[1]?.price) {
-              if (responseUpdate?.upgradesForBuy && responseUpdate?.upgradesForBuy?.length > 0) {
-                upgradesForBuy = sortUpgradesForBuy(responseUpdate?.upgradesForBuy);
-              } else {
-                isNextUpdate = false;
-                console.log("error 01");
-              }
+      // let isNextUpdate = true;
+      // if (upgradesForBuy[0].price > 1000000) {
+      //   console.log("upgradesForBuy ", upgradesForBuy[0].price);
+
+      //   return;
+      // }
+
+      let isNextUpdate = true;
+      while (isNextUpdate) {
+        const timestamp = new Date().getTime();
+        const upgradeId = upgradesForBuy[0]?.id;
+        let data = JSON.stringify({
+          upgradeId: upgradeId,
+          timestamp: timestamp,
+        });
+        console.log("Update: ", data);
+        var responseUpdate = await callApiBuyUpgrade(account, data);
+
+        if (responseUpdate?.statusCode === 201 || responseUpdate?.statusCode === 200) {
+          const balanceCoins = responseUpdate?.clickerUser?.balanceCoins
+            ? Math.floor(responseUpdate?.clickerUser?.balanceCoins)
+            : 0;
+
+          console.log(
+            ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Balance Coins",
+            balanceCoins.toLocaleString("en-US"),
+          );
+          console.log("price", upgradesForBuy?.[1]?.price.toLocaleString("en-US"));
+          console.log("profitPerHourDelta", upgradesForBuy?.[1]?.profitPerHourDelta.toLocaleString("en-US"));
+          console.log("tb: ", upgradesForBuy?.[1]?.price / upgradesForBuy?.[1]?.profitPerHourDelta);
+
+          if (balanceCoins >= upgradesForBuy?.[1]?.price) {
+            if (responseUpdate?.upgradesForBuy && responseUpdate?.upgradesForBuy?.length > 0) {
+              upgradesForBuy = sortUpgradesForBuy(responseUpdate?.upgradesForBuy);
             } else {
-              console.log("Hết điểm");
               isNextUpdate = false;
+              console.log("error 01");
             }
           } else {
+            console.log("Hết điểm");
             isNextUpdate = false;
-
-            console.log("responseUpdate", responseUpdate);
-            console.log("Update fail");
           }
+        } else {
+          isNextUpdate = false;
+
+          console.log("responseUpdate", responseUpdate);
+          console.log("Update fail");
         }
       }
-      isRun = false;
-    } else {
-      console.log("Job fail", response);
-      isRun = false;
     }
+    isRun = false;
+  } else {
+    console.log("Job fail", response);
+    isRun = false;
   }
-
-  console.log("DONE AT ", new Date());
-  setTimeout(() => {
-    run(account);
-  }, 60 * 1000 * 60);
+  // }
 }
 
 async function main() {

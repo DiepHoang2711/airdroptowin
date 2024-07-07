@@ -2,7 +2,6 @@ const axios = require("axios");
 const puppeteer = require("puppeteer");
 const { accounts } = require("./config");
 const fs = require("fs");
-const path = require("path");
 const vm = require("vm");
 
 const configPath = "./seed/config.js";
@@ -25,15 +24,11 @@ async function updateConfig(accountIndex, newInitData) {
     // Get the accounts array
     let accounts = context.module.exports.accounts;
 
-    // Update init_data for the account with index 2 (for example)
-    const accountIndex = 2;
-    const newInitData = "new init_data value here"; // Replace with the new init_data value
-
     accounts = accounts.map((account) => {
       if (account.index === accountIndex) {
         return {
           ...account,
-          init_data: newInitData,
+          initData: newInitData,
         };
       }
       return account;
@@ -94,6 +89,9 @@ async function getDataInit(account, url) {
   await new Promise((resolve) => setTimeout(resolve, 8000));
   await page.close();
   await browser.close();
+
+  await updateConfig(account.index, initData);
+
   return initData;
 }
 
@@ -131,15 +129,13 @@ async function callApi(account) {
 }
 
 async function run() {
+  debugger
   for (let index = 0; index < accounts.length; index++) {
     let account = accounts[index];
     console.log("start account --> ", index);
     let isRun = true;
 
     const url = "https://web.telegram.org/k/#@seed_coin_bot";
-    const initData = await getDataInit(account, url);
-    account.initData = initData;
-
     while (isRun) {
       const response = await callApi(account);
       if (response?.statusCode === 201 || response?.statusCode === 200) {
@@ -153,6 +149,8 @@ async function run() {
         console.log("Job fail", response);
         isRun = false;
       }
+
+      setTimeout(() => {}, 1000);
     }
   }
 

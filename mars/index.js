@@ -1,5 +1,5 @@
 const axios = require("axios");
-const { getDateTimeLocal } = require("../common");
+const { getDateTimeLocal, writeFile } = require("../common");
 const { accounts } = require("./config");
 const puppeteer = require('puppeteer');
 
@@ -42,6 +42,11 @@ async function getDataInit(account, url) {
   await new Promise(resolve => setTimeout(resolve, 10000));
   await page.close();
   await browser.close();
+
+  if(Boolean(initData)) {
+    writeFile("mars", "config.js", account.index, initData, "initData");
+  }
+
   return initData;
 };
 
